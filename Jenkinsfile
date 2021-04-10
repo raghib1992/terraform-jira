@@ -15,7 +15,7 @@ pipeline {
                     echo "*******clone from master branch********"
                     echo "***************************************"
                 '''
-                # git branch: 'master', changelog: false, poll: false, url: 'https://github.com/raghib1992/terraform-jira.git'
+                
 
                 sh '''
                     echo "****************************************"
