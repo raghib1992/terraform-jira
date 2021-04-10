@@ -27,7 +27,8 @@ pipeline {
         }
         stage('PREPARING GIT FOR NEW CUSTOMER') {
             steps {
-              sh 'chmod +x prepare.sh'
+              sh 'chmod +x ec2/prepare.sh'
+              
                   
             }
             
