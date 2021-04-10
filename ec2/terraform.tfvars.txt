@@ -1,2 +1,0 @@
-AWS_REGION=ap-south-1
-INSTANCE_NAME=newcustomer

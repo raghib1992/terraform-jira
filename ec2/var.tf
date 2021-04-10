@@ -9,7 +9,7 @@ variable "PUBLIC_KEY" {
 }
 
 variable "PRIVATE_KEY" {
-    default = "test-key.pem"  
+    default = "test-key"  
 }
 
 variable "AMIS" {
