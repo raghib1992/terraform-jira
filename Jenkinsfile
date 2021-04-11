@@ -8,10 +8,13 @@ pipeline {
     stages {
         stage('PREPARING GIT FOR NEW CUSTOMER') {
             steps {
-                sh 'ls -l'
-                sh 'pwd'
-                sh 'chmod +x ec2/prepare.sh'
-                sh './ec2/prepare.sh $NEW_CUSTOMER'             
+                sh '''
+                    cd /var/jenkins_home/workspace/terraform-pipeline/ec2/ && \
+                    ls -l && \
+                    pwd && \
+                    chmod +x /prepare.sh' && \
+                    ./prepare.sh $NEW_CUSTOMER
+                    '''             
             }
             
         }
