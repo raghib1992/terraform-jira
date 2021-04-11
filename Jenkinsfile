@@ -12,7 +12,7 @@ pipeline {
                     cd /var/jenkins_home/workspace/terraform-pipeline/ec2/
                     ls -l
                     pwd
-                    chmod +x /prepare.sh
+                    chmod +x prepare.sh
                     ./prepare.sh $NEW_CUSTOMER
                   '''             
             }
@@ -20,8 +20,11 @@ pipeline {
         }
         stage('deploying new infra for new customer') {
             steps {
-                sh 'chmod +x ec2/infra.sh'
-                sh './ec2/infra.sh $SECRET_TEXT'                    
+                sh '''
+                    cd /var/jenkins_home/workspace/terraform-pipeline/ec2/
+                    chmod +x infra.sh
+                    ./infra.sh $SECRET_TEXT
+                  '''
             }            
         }
     }
