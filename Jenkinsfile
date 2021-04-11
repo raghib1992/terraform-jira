@@ -18,8 +18,14 @@ pipeline {
             steps {
                 sh 'chmod +x ec2/infra.sh'
                 sh './ec2/infra.sh $SECRET_TEXT'                    
-            }
-            
+            }            
+        }
+        stage('deploying new infra for new customer') {
+            steps {
+                sh 'cd ec2/'
+                sh 'terraform init'                    
+            }            
         }
     }
+    
 }
