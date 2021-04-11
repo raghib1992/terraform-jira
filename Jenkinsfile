@@ -18,12 +18,21 @@ pipeline {
             }
             
         }
-        stage('deploying new infra for new customer') {
+        stage('Creating new branch for new customer') {
             steps {
                 sh '''
                     cd /var/jenkins_home/workspace/terraform-pipeline/ec2/
                     chmod +x infra.sh
                     ./infra.sh $SECRET_TEXT
+                  '''
+            }            
+        }
+        stage('deploying new infra for new customer') {
+            steps {
+                sh '''
+                    cd /var/jenkins_home/workspace/terraform-pipeline/ec2/
+                    terraform init
+                    terraform plan                    
                   '''
             }            
         }
