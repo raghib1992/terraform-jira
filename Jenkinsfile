@@ -20,8 +20,6 @@ pipeline {
                     cd ec2/
                     sed -i "s|aws-password|$AWS_SECRET|g" terraform.tfvars
                     ssh-keygen -f test-key
-                    terraform init
-                    terraform plan
             }
             
         }
