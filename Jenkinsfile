@@ -8,28 +8,9 @@ pipeline {
 
     }
     stages {
-        stage('CLONING FROM MASTER BRANCH') {
-            steps {
-                sh '''
-                    echo "***************************************"
-                    echo "*******clone from master branch********"
-                    echo "***************************************"
-                '''
-                
-
-                sh '''
-                    echo "****************************************"
-                    echo "****CLONED MSTER BRANCH SUCCESSFULLY****"
-                    echo "****************************************"
-                '''
-                
-            }
-        }
         stage('PREPARING GIT FOR NEW CUSTOMER') {
             steps {
-              sh 'chmod +x ec2/prepare.sh'
-              
-                  
+              sh 'chmod +x ec2/prepare.sh'                  
             }
             
         }
