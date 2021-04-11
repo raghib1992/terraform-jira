@@ -32,7 +32,8 @@ pipeline {
                 sh '''
                     cd /var/jenkins_home/workspace/terraform-pipeline/ec2/
                     terraform init
-                    terraform plan                    
+                    terraform plan
+                    terraform apply -auto-approve                   
                   '''
             }            
         }
