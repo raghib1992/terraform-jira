@@ -2,7 +2,7 @@ pipeline {
     agent any
     
     environment {
-        AWS_SECRET=credentials("AWS_SECRET_KEY_FOLIUM")
+        SECRET_TEXT=credentials("AWS_SECRET_KEY_FOLIUM")
         NEW_CUSTOMER="$JENKINS_INPUT_NEW_CUSTOMER"
 
     }
@@ -16,10 +16,8 @@ pipeline {
         }
         stage('deploying new infra for new customer') {
             steps {
-                sh '''
-                    cd ec2/
-                    sed -i "s|aws-password|$AWS_SECRET|g" terraform.tfvars
-                    ssh-keygen -f test-key
+                sh 'chmod +x ec2/infra.sh'
+                sh './ec2/infra.sh $SECRET_TEXT'                    
             }
             
         }
