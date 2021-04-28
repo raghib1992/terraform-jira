@@ -2,8 +2,8 @@ pipeline {
     agent any
     
     environment {
-        SECRET_TEXT=credentials("AWS_SECRET_KEY_FOLIUM")
-        NEW_CUSTOMER="$JENKINS_INPUT_NEW_CUSTOMER"
+       SECRET_TEXT=credentials("AWS_SECRET_KEY_FOLIUM")
+       // NEW_CUSTOMER="$JENKINS_INPUT_NEW_CUSTOMER"
     }
     stages {
         stage('PREPARING GIT FOR NEW CUSTOMER') {
@@ -13,7 +13,7 @@ pipeline {
                     ls -l
                     pwd
                     chmod +x prepare.sh
-                    ./prepare.sh $NEW_CUSTOMER
+                    ./prepare.sh foliumcloud
                   '''             
             }
             
