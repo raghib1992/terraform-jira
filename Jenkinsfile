@@ -3,7 +3,7 @@ pipeline {
     
     environment {
        SECRET_TEXT=credentials("AWS_SECRET_KEY_FOLIUM")
-       // NEW_CUSTOMER="$JENKINS_INPUT_NEW_CUSTOMER"
+       NEW_CUSTOMER="$JENKINS_INPUT_NEW_CUSTOMER"
     }
     stages {
         stage('PREPARING GIT FOR NEW CUSTOMER') {
