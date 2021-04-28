@@ -13,7 +13,7 @@ pipeline {
                     ls -l
                     pwd
                     chmod +x prepare.sh
-                    ./prepare.sh foliumcloud
+                    ./prepare.sh $NEW_CUSTOMER
                   '''             
             }
             
