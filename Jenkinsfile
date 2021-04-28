@@ -9,7 +9,7 @@ pipeline {
         stage('PREPARING GIT FOR NEW CUSTOMER') {
             steps {
                 sh '''
-                    cd /var/jenkins_home/workspace/test-jenkins/ec2/
+                    cd /var/jenkins_home/workspace/aws-saas-terraform/ec2/
                     ls -l
                     pwd
                     chmod +x prepare.sh
@@ -21,7 +21,7 @@ pipeline {
         stage('Creating new branch for new customer') {
             steps {
                 sh '''
-                    cd /var/jenkins_home/workspace/test-jenkins/ec2/
+                    cd /var/jenkins_home/workspace/aws-saas-terraform/ec2/
                     chmod +x infra.sh
                     ./infra.sh $SECRET_TEXT
                   '''
@@ -30,7 +30,7 @@ pipeline {
         stage('deploying new infra for new customer') {
             steps {
                 sh '''
-                    cd /var/jenkins_home/workspace/test-jenkins/ec2/
+                    cd /var/jenkins_home/workspace/aws-saas-terraform/ec2/
                     terraform init
                     terraform plan
                     terraform apply -auto-approve                   
