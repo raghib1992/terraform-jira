@@ -10,5 +10,5 @@ resource "aws_instance" "example" {
     tags = {
       "Name" = "${var.INSTANCE_NAME}"
     }
-# iam_instance_profile = aws_iam_instance_profile.s3-access-instance-profile.name  
+    iam_instance_profile = aws_iam_instance_profile.s3-access-instance-profile.name  
 }
