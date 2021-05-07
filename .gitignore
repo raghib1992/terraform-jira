@@ -1,5 +1,2 @@
-.*~
-.terraform
-.DS_Store
-.idea
-
+.terraform*
+test-key*

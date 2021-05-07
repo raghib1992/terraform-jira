@@ -1,0 +1,4 @@
+AWS_REGION="ap-south-1"
+INSTANCE_NAME="newcustomer"
+AWS_ACCESS_KEY="AKIARFH3I6UWWE67AKRF"
+AWS_SECRET_KEY="aws-password"
