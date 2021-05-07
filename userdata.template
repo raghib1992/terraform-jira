@@ -1,0 +1,218 @@
+#!/bin/bash
+mkdir -p /opt/securecircle/certs && cd /opt/securecircle
+openssl req -x509 -newkey rsa:4096 -keyout /opt/securecircle/certs/key -out /opt/securecircle/certs/chain -days 3650 -nodes -subj "/CN=`hostname`"
+yum install -y awscli https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/linux_amd64/amazon-ssm-agent.rpm
+export INSTANCE_ID=`curl -s http://169.254.169.254/latest/meta-data/instance-id`
+export AWSLOGS_REGION="${region}"
+export AWSLOGS_GROUP="${log-group}"
+export AWSLOGS_SERVER_STREAM="server-$${INSTANCE_ID}"
+export AWSLOGS_PROXY_STREAM="proxy-$${INSTANCE_ID}"
+export AWSLOGS_SCCONVERTER_STREAM="scconverter-$${INSTANCE_ID}"
+amazon-linux-extras install -y docker
+curl -L "https://github.com/docker/compose/releases/download/1.24.1/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose && chmod +x /usr/local/bin/docker-compose
+export PATH="$${PATH}:/usr/local/bin"
+systemctl enable docker && systemctl start docker
+echo "### Begin SecureCircle Server v2.14.2 docker-compose.yml ###
+version: '3'
+networks:
+  securecircle: null
+volumes:
+  securecircle-ui: null
+  securecircle-sharing-portal: null
+%{ if glowroot_enabled ~}
+  glowroot-data: null
+%{ endif ~}
+services:
+  securecircle-server:
+    restart: always
+    image: 925201460575.dkr.ecr.us-west-2.amazonaws.com/securecircle-server:2.14.2.691
+    entrypoint: /opt/wait-for-it.sh -s -t 120 \$${DB_HOST}:\$${DB_PORT} --
+    command: /usr/local/tomcat/bin/catalina.sh run
+    environment:
+      JAVA_OPTS: -Djavax.net.ssl.trustStore=/usr/local/tomcat/conf/truststore.jks
+        -Djavax.net.ssl.trustStorePassword=changeit
+%{ if glowroot_enabled ~}
+        -javaagent:/opt/glowroot/glowroot.jar
+%{ endif ~}
+      base_domain: \$${SECURECIRCLE_SERVER_FQDN}
+      show_smtp_debug_info: 'false'
+      smtp_socket_timeout: 20
+      smtp_connection_timeout: 10
+      sharing_confirmation_lifetime_seconds: 1800
+      key_cache_lifetime_seconds: 3
+      sc_local_state_cache_ttl: 3
+      logging_db_type: mysql
+      logging_db_username: \$${LOGGING_DB_USERNAME}
+      logging_db_password: \$${LOGGING_DB_PASSWORD}
+      logging_db_url: \$${LOGGING_DB_URL}?sessionVariables=sql_mode='ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION,ANSI_QUOTES'
+      folium_runtime_db_type: mysql
+      folium_runtime_db_username: \$${RUNTIME_DB_USERNAME}
+      folium_runtime_db_password: \$${RUNTIME_DB_PASSWORD}
+      folium_runtime_db_url: \$${RUNTIME_DB_URL}?sessionVariables=sql_mode='ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION,ANSI_QUOTES'
+      share_db_type: mysql
+      share_db_url: \$${SHARE_DB_URL}?sessionVariables=sql_mode='ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION,ANSI_QUOTES'
+      share_db_username: \$${SHARE_DB_USERNAME}
+      share_db_password: \$${SHARE_DB_PASSWORD}
+      folium_spare_db_type: mysql
+      folium_spare_db_username: \$${SPARE_DB_USERNAME}
+      folium_spare_db_password: \$${SPARE_DB_PASSWORD}
+      folium_spare_db_url: \$${SPARE_DB_URL}?sessionVariables=sql_mode='ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION,ANSI_QUOTES'
+      folium_system_db_type: mysql
+      folium_system_db_username: \$${SYSTEM_DB_USERNAME}
+      folium_system_db_password: \$${SYSTEM_DB_PASSWORD}
+      folium_system_db_url: \$${SYSTEM_DB_URL}?sessionVariables=sql_mode='ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION,ANSI_QUOTES'
+      folium_tracker_db_type: mysql
+      folium_tracker_db_username: \$${TRACKER_DB_USERNAME}
+      folium_tracker_db_password: \$${TRACKER_DB_PASSWORD}
+      folium_tracker_db_url: \$${TRACKER_DB_URL}?sessionVariables=sql_mode='ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION,ANSI_QUOTES'
+      sc_redis_host: \$${REDIS_HOST}
+      sc_redis_port: \$${REDIS_PORT}
+      LOG_FILE_APPENDER_LEVEL: 'OFF'
+      CONSOLE_APPENDER_LEVEL: INFO
+      converter_url: \$${CONVERTER_URL}
+      wopi_enabled: '${wopi_enabled}'
+      wopi_url: ${wopi_url}
+      base_domain_alias: ${base_domain_alias}
+    volumes:
+    - ./voltageTrustStore:/etc/voltage/trustStore
+    - ./log:/var/log/securecircle
+    # MD5 (truststore.jks) = ${truststore_hash}
+    - ./truststore.jks:/usr/local/tomcat/conf/truststore.jks
+%{ if glowroot_enabled ~}
+    # Glowroot
+    - glowroot-data:/opt/glowroot/data
+    - ./certs/chain:/opt/glowroot/ui-cert.pem:ro
+    - ./certs/key:/opt/glowroot/ui-key.pem:ro
+%{ endif ~}
+    networks:
+      securecircle:
+        aliases:
+        - server
+    expose:
+    - '8080'
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: \$${AWSLOGS_REGION}
+        awslogs-group: \$${AWSLOGS_GROUP}
+        awslogs-stream: \$${AWSLOGS_SERVER_STREAM}
+        awslogs-multiline-pattern: ^[\[\{][^\]]*[\]\}] [0-9-]+ [0-9:,]+ \[[^\]]*\]
+    ports:
+    - 8080:8080
+%{ if glowroot_enabled ~}
+    - 4000:4000
+%{ endif ~}
+  securecircle-http:
+    depends_on:
+    - securecircle-ui
+    restart: always
+    image: 925201460575.dkr.ecr.us-west-2.amazonaws.com/securecircle-http:2.10.0.51
+    environment:
+      NGINX_SERVER_NAME: \$${SECURECIRCLE_SERVER_FQDN}
+      NO_USE_SSL: 'yes'
+    volumes:
+    - ./certs:/etc/nginx/certs:ro
+    - ./download:/var/htdocs/download:ro
+    - securecircle-ui:/var/htdocs/web/static
+    - securecircle-sharing-portal:/var/htdocs/shrecker/static
+    networks:
+    - securecircle
+    ports:
+    - 443:443
+    - 80:80
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: \$${AWSLOGS_REGION}
+        awslogs-group: \$${AWSLOGS_GROUP}
+        awslogs-stream: \$${AWSLOGS_PROXY_STREAM}
+  securecircle-ui:
+    image: 925201460575.dkr.ecr.us-west-2.amazonaws.com/securecircle-ui:2.14.2.272
+    volumes:
+    - securecircle-ui:/var/htdocs/web/static
+  sharing-portal:
+    image: 925201460575.dkr.ecr.us-west-2.amazonaws.com/securecircle-sharing-portal:2.14.0.36
+    volumes:
+    - securecircle-sharing-portal:/var/htdocs/shrecker/static
+  redis:
+    restart: always
+    image: redis
+    networks:
+      securecircle:
+        aliases:
+        - redis
+    expose:
+    - '6379'
+  remotefs:
+    restart: always
+    image: 925201460575.dkr.ecr.us-west-2.amazonaws.com/sc_saas_ecs_remotefs:0.1
+    environment:
+      LOCAL_PATH: /var/htdocs/download/
+      S3_URI: \$${S3SYNC_S3_URI}
+    command: /s3syncdir.sh
+    volumes:
+    - ./download:/var/htdocs/download:rw
+  securecircle-converter:
+    restart: always
+    image: 925201460575.dkr.ecr.us-west-2.amazonaws.com/securecircle-converter:2.8.1
+    ports:
+    - 4443:80
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: \$${AWSLOGS_REGION}
+        awslogs-group: \$${AWSLOGS_GROUP}
+        awslogs-stream: \$${AWSLOGS_SCCONVERTER_STREAM}
+
+### End SecureCircle Server v2.14.2 docker-compose.yml ###
+" > /opt/securecircle/docker-compose.yml
+echo '### Begin SecureCircle Server v2.14.2 .env ###
+
+# Application Server
+SECURECIRCLE_SERVER_FQDN=${hostname}.${domainname}
+
+# Database
+DB_HOST=${dbname}
+DB_PORT=${dbport}
+DB_TYPE=mysql
+DB_USERNAME=${username}
+DB_PASSWORD=${plaintext-pw}
+SYSTEM_DB_URL=jdbc:mysql://${dbname}:${dbport}/System
+TRACKER_DB_URL=jdbc:mysql://${dbname}:${dbport}/Tracker
+SHARE_DB_URL=jdbc:mysql://${dbname}:${dbport}/Share
+RUNTIME_DB_URL=jdbc:mysql://${dbname}:${dbport}/Runtime
+LOGGING_DB_URL=jdbc:mysql://${dbname}:${dbport}/Logging
+SPARE_DB_URL=jdbc:mysql://${dbname}:${dbport}/Spare
+SYSTEM_DB_USERNAME=${username}
+TRACKER_DB_USERNAME=${username}
+SHARE_DB_USERNAME=${username}
+RUNTIME_DB_USERNAME=${username}
+LOGGING_DB_USERNAME=${username}
+SPARE_DB_USERNAME=${username}
+SYSTEM_DB_PASSWORD=${plaintext-pw}
+TRACKER_DB_PASSWORD=${plaintext-pw}
+SHARE_DB_PASSWORD=${plaintext-pw}
+RUNTIME_DB_PASSWORD=${plaintext-pw}
+LOGGING_DB_PASSWORD=${plaintext-pw}
+SPARE_DB_PASSWORD=${plaintext-pw}
+
+# Caching
+REDIS_HOST=redis
+REDIS_PORT=6379        
+
+#S3SYNC
+S3SYNC_S3_URI=s3://${agent_upload_bucket}/${customer}
+
+# Converter
+CONVERTER_URL=https://${hostname}.${domainname}:4443
+
+### End SecureCircle Server v2.14.2 .env ###
+' > /opt/securecircle/.env && chmod 600 /opt/securecircle/.env
+`aws ecr --region us-west-2 get-login --no-include-email`
+aws s3 cp s3://${config_bucket}/${customer}/truststore.jks /opt/securecircle/truststore.jks
+docker-compose up -d
+
+echo '#!/bin/bash
+yum install -y awscli jq
+export INSTANCE_ID=`curl -s http://169.254.169.254/latest/meta-data/instance-id`
+while [ -z "`aws --region ${region} ec2 describe-addresses --filter Name=tag:sc_customer,Values=${customer} | jq '\''.Addresses[] | select(.InstanceId == "'\''"$${INSTANCE_ID}"'\''")'\''`" ]; do echo "`date` - No EIP association"; EIP_ALLOCATION="`aws --region ${region} ec2 describe-addresses --filter Name=tag:sc_customer,Values=${customer} | jq -r '\''[.Addresses[] | select(.AssociationId == null)] | first.AllocationId'\''`"; if [ -n "$${EIP_ALLOCATION}" ]; then aws --region ${region} ec2 associate-address --allocation-id $${EIP_ALLOCATION} --instance-id $${INSTANCE_ID} --no-allow-reassociation; else echo "`date` - No EIP available"; fi; sleep 120; done' > $TEMPDIR/eip-grab.sh && chmod +x $TEMPDIR/eip-grab.sh && $TEMPDIR/eip-grab.sh >> /var/log/eip-grab.log 2>&1 & disown $!
